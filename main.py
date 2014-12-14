@@ -1,87 +1,70 @@
 import re
 import string
-import socket
 
-class IRCConnection:
-    """
-    IRC is a textbased protocol on the form
-    COMMAND CONTENT<newline>
+from irc.protocol import IRCProtocolParser
+from irc.connection import IRCConnection
 
-    TODO: Consider parallelism
-    * Threads (python is always single threaded as only one thread can be active at a time)
-        Read from multiple sockets at once
-        Wait for long computations
-    TODO: How to deal with TCP timeout, reset, and close?
-    """
+class Bot:
 
-    def __init__(self, event_cb, host, port):
-        self.host = host
-        self.port = port
-        self.event_cb = event_cb
-        self.buffer = list()
-        
-    def main(self):
+    def __init__(self, config):
+        self.config = config
+        self.parser = IRCProtocolParser(self)
+        host = config["server"]["host"]
+        port = config["server"]["port"]
+        self.connection = IRCConnection(self.parser, host, port)
 
-        # Set up socket
-        self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.socket.connect((self.host, self.port))
-        self.event_cb(self, {"type":"connect", "message":""})
+    def nick_string(self):
+        # TODO: Strategy if name is taken (e.g ping timeout)
+        return "NICK "+self.config["nick"][0]
 
-        # Main loop
-        while True:
-            data = self.socket.recv(1024)
+    def user_string(self):
+        username = self.config["user"]["username"]
+        hostname = self.config["user"]["hostname"]
+        servername = self.config["user"]["servername"]
+        realname = self.config["user"]["realname"]
+        return " ".join(["USER", username, hostname, servername, realname])
 
-            # Print raw data
-            #print "RAW:",data,
+    def connect(self):
+        self.connection.connect()
 
-            # Exit loop if no data
-            if not data: break
+    def event_cb(self, event):
+        print "event:", event
+        if event["event"] == "register":
+            self.connection.send(self.nick_string() + "\r\n")
+            self.connection.send(self.user_string() + "\r\n")
 
-            # Check if message contain newline
-            if "\r\n" in data:
-                while "\r\n" in data:
-                    index = data.find("\r\n")
+        elif event["event"] == "ping":
+            msg = event["data"]
+            print "PING EVENT DETECTED"
+            self.connection.send(string.replace(msg, "PING", "PONG")+"\r\n")
 
-                    # Join message
-                    msg = "".join(self.buffer) + data[:index]
-                    del self.buffer[:]
-
-                    # Report
-                    print "IN:",msg
-                    self.event_cb(self, {"type":"message", "message":msg})
-
-                    # Remove used data, +2 for CR LF
-                    data = data[index+2:]
-                if len(data) > 0:
-                    self.buffer.append(data)
-            else:
-                self.buffer.append(data)
-
-        # Report socket being dead
-        self.event_cb(self, {"type":"disconnect", "message":""})
-
-    def send(self, msg):
-        print "OUT:", msg,
-        self.socket.send(msg)
-
-def event_cb(irc, event):
-    if event["type"] == "connect":
-        irc.send("NICK riemannoob\r\n")
-        irc.send("USER bot hyperspace indrome.com :Some bot\r\n")
-    elif event["type"] == "message":
-        msg = event["message"]
-        if re.search("^PING", msg):
-            irc.send(string.replace(msg, "PING", "PONG")+"\r\n")
-        elif re.search("^:", msg):
-            # All messages will be parsed with this pattern
+        elif event["event"] == "message":
             pass
 
-    elif event["type"] == "disconnect":
-        pass
+        elif event["event"] == "disconnect":
+            pass
 
 
 if __name__ == "__main__":
 
-    # Set up socket and connect
-    irc = IRCConnection(event_cb, "irc.quakenet.org", 6667)
-    irc.main()
+    config = {
+        "server": {
+            "host":"irc.quakenet.org",
+            "port":6667
+            },
+        "nick": (
+            "riemannoob",
+            "riemannoob_"
+            ),
+        "user": {
+            "username": "riemannbot",
+            "hostname": "hyperspace",
+            "servername": "indrome.com",
+            "realname": ":Mr. Bot" # Colon allows for space
+        }
+    }
+
+    bot = Bot(config)
+
+    # Will exit after first disconnect
+    bot.connect()
