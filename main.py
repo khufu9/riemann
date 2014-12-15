@@ -1,6 +1,7 @@
 import re
 import string
 
+import utils.youtube as youtube
 from irc.protocol import IRCProtocolParser
 from irc.connection import IRCConnection
 
@@ -53,8 +54,9 @@ if __name__ == "__main__":
             "port":6667
             },
         "nick": (
-            "riemannoob",
-            "riemannoob_"
+            "riemann",
+            "riemannbot",
+            "riemannbot_"
             ),
         "user": {
             "username": "riemannbot",
