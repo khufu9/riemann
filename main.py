@@ -25,6 +25,10 @@ class Bot:
         realname = self.config["user"]["realname"]
         return " ".join(["USER", username, hostname, servername, realname])
 
+    def join_string(self):
+        channels = ",".join(self.config["channels"])
+        return "JOIN " + channels
+
     def connect(self):
         self.connection.connect()
 
@@ -40,8 +44,23 @@ class Bot:
             self.connection.send(string.replace(msg, "PING", "PONG")+"\r\n")
 
         elif event["event"] == "message":
-            pass
-
+            print event["data"]
+            if event["code"] == "376": # End of MOTD
+                self.connection.send(self.join_string() + "\r\n")
+        
+        elif event["event"] == "PRIVMSG":
+            print event
+            words = event["content"].split()
+            for word in words:
+                if "youtube" in word or "youtu.be" in word:
+                    test = youtube.getTitle(word)
+                    if test is not None:
+                        if event["destination"] in self.config["nick"]:
+                            dst = event["source"]
+                        else:
+                            dst = event["destination"]
+                        self.connection.send("PRIVMSG " + dst +" :" + test + "\r\n")
+            
         elif event["event"] == "disconnect":
             pass
 
@@ -52,18 +71,21 @@ if __name__ == "__main__":
         "server": {
             "host":"irc.quakenet.org",
             "port":6667
-            },
-        "nick": (
+        },
+        "nick": [
             "riemann",
             "riemannbot",
             "riemannbot_"
-            ),
+        ],
         "user": {
             "username": "riemannbot",
             "hostname": "hyperspace",
             "servername": "indrome.com",
             "realname": ":Mr. Bot" # Colon allows for space
-        }
+        },
+        "channels":[
+            "#blashyrk"
+        ]
     }
 
     bot = Bot(config)
