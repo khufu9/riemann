@@ -28,7 +28,10 @@ class IRCConnection:
 
         # Main loop
         while True:
-            data = self.socket.recv(1024)
+            try:
+                data = self.socket.recv(1024)
+            except:
+                data = None
 
             # Print raw data
             #print "RAW:",data,
@@ -62,4 +65,9 @@ class IRCConnection:
     def send(self, msg):
         print "OUT:", msg,
         self.socket.send(msg.encode('utf-8'))
+
+    def quit(self):
+        print "QUIT", socket.SHUT_WR
+        self.socket.shutdown(socket.SHUT_WR)
+        self.socket.close()
 

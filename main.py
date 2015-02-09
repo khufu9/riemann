@@ -1,7 +1,10 @@
 import re
 import string
+import time
 
 import utils.youtube as youtube
+
+import irc
 from irc.protocol import IRCProtocolParser
 from irc.connection import IRCConnection
 
@@ -14,10 +17,16 @@ class Bot:
         port = config["server"]["port"]
         self.connection = IRCConnection(self.parser, host, port)
 
-    def nick_string(self):
-        # TODO: Strategy if name is taken (e.g ping timeout)
-        return "NICK "+self.config["nick"][0]
+    def nick_string(self, nick = None):
+        if nick is None:
+            nick = self.config["nick"][self.config["nickIndex"]]
+        return "NICK "+nick
 
+    def next_nick(self):
+        index = (self.config["nickIndex"] + 1) % len(self.config["nick"])
+        self.config["nickIndex"] = index
+        return index == 0 # Wrapped
+    
     def user_string(self):
         username = self.config["user"]["username"]
         hostname = self.config["user"]["hostname"]
@@ -30,6 +39,7 @@ class Bot:
         return "JOIN " + channels
 
     def connect(self):
+        self.config["nickIndex"] = 0
         self.connection.connect()
 
     def event_cb(self, event):
@@ -45,8 +55,15 @@ class Bot:
 
         elif event["event"] == "message":
             print event["data"]
-            if event["code"] == "376": # End of MOTD
+            if event["code"] == irc.RPL_ENDOFMOTD or event["code"] == irc.ERR_NOMOTD:
                 self.connection.send(self.join_string() + "\r\n")
+            elif event["code"] == irc.ERR_NICKNAMEINUSE:
+                if self.next_nick():
+                    self.config["timeout"] = 300
+                    self.connection.quit()
+                    return
+                
+                self.connection.send(self.nick_string() + "\r\n")
         
         elif event["event"] == "PRIVMSG":
             print event
@@ -60,7 +77,7 @@ class Bot:
                         else:
                             dst = event["destination"]
                         self.connection.send("PRIVMSG " + dst +" :" + test + "\r\n")
-            
+
         elif event["event"] == "disconnect":
             pass
 
@@ -77,6 +94,7 @@ if __name__ == "__main__":
             "riemannbot",
             "riemannbot_"
         ],
+        "nickIndex": 0,
         "user": {
             "username": "riemannbot",
             "hostname": "hyperspace",
@@ -85,10 +103,20 @@ if __name__ == "__main__":
         },
         "channels":[
             "#blashyrk"
-        ]
+        ],
+        "timeout": 0
     }
 
     bot = Bot(config)
 
     # Will exit after first disconnect
-    bot.connect()
+    while 1:
+        bot.connect()
+        if bot.config["timeout"] > 0:
+            print "timeout:", bot.config["timeout"], "seconds"
+            time.sleep(bot.config["timeout"])
+            bot.config["timeout"] = 0
+        else:
+            print "timeout: 5 seconds"
+            time.sleep(5)
+
