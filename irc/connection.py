@@ -61,4 +61,5 @@ class IRCConnection:
 
     def send(self, msg):
         print "OUT:", msg,
-        self.socket.send(msg)
+        self.socket.send(msg.encode('utf-8'))
+
