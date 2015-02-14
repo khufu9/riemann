@@ -76,7 +76,7 @@ class Bot:
                             dst = event["source"]
                         else:
                             dst = event["destination"]
-                        self.connection.send("PRIVMSG " + dst +" :" + test + "\r\n")
+                        self.connection.send("PRIVMSG " + dst +" : > " + test + "\r\n")
 
         elif event["event"] == "disconnect":
             pass
