@@ -3,6 +3,7 @@ import string
 import time
 
 import utils.youtube as youtube
+import utils.get_url_title as get_url_title
 
 import irc
 from irc.protocol import IRCProtocolParser
@@ -78,8 +79,8 @@ class Bot:
                             dst = event["destination"]
                         self.connection.send("PRIVMSG " + dst +" : > " + test + "\r\n")
                 # The following should be put last after specific www services
-                elif "http://" in word:
-                    test = youtube.getTitle(word)
+                elif "http://" in word or "https://" in word:
+                    test = get_url_title.get_title(word)
                     if test is not None:
                         if event["destination"] in self.config["nick"]:
                             dst = event["source"]

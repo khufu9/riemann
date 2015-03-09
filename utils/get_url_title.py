@@ -3,7 +3,7 @@ import re
 """
 Author: koltrast
 """
-def getTitle(url):
+def get_title(url):
     # Connect and get HTML doc
     response = urllib2.urlopen(url)
     html = response.read()
