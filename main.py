@@ -77,6 +77,15 @@ class Bot:
                         else:
                             dst = event["destination"]
                         self.connection.send("PRIVMSG " + dst +" : > " + test + "\r\n")
+                # The following should be put last after specific www services
+                elif "http://" in word:
+                    test = youtube.getTitle(word)
+                    if test is not None:
+                        if event["destination"] in self.config["nick"]:
+                            dst = event["source"]
+                        else:
+                            dst = event["destination"]
+                        self.connection.send("PRIVMSG " + dst +" : > " + test + "\r\n")
 
         elif event["event"] == "disconnect":
             pass
