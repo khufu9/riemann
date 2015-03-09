@@ -21,8 +21,8 @@ def get_title(url):
     # Get rid of HTML tag
     title_str = re.sub("</?title>", "", title_str)
 
-    return title_str
+    return title_str.decode('utf-8')
 
 if __name__ == "__main__":
-    #print getTitle('http://www.google.com')
-    print getTitle('https://www.google.com')
+    #print get_title('http://www.google.com')
+    print get_title('https://www.google.com')
