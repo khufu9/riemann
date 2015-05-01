@@ -4,6 +4,8 @@ import re
 Author: koltrast
 """
 def get_title(url):
+    '''Fetch HTML document at given HTTP URL and extract and return its title'''
+
     url = re.sub('( .+)?','', re.sub('.+http(s?)','http\\1',url)) # Trim URL
     response = urllib2.urlopen(url) # Connect and get HTML doc
     html = response.read() # Read content to string
